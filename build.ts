@@ -12,8 +12,10 @@ const result = await esbuild.build({
   format: "esm",
 });
 
+const banner = new TextEncoder().encode("// deno-lint-ignore-file\n");
+
 result.outputFiles?.forEach(({ path, contents }) =>
-  Deno.writeFile(path, contents)
+  Deno.writeFile(path, new Uint8Array([...banner, ...contents]))
 );
 
 esbuild.stop();
