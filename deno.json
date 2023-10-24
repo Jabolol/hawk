@@ -1,0 +1,10 @@
+{
+  "lock": false,
+  "imports": {
+    "telegram-types": "npm:@types/node-telegram-bot-api"
+  },
+  "tasks": {
+    "build": "deno run --allow-read=. --allow-write=main.js --allow-net=deno.land build.ts",
+    "deploy": "npx wrangler deploy"
+  }
+}
