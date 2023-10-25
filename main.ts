@@ -52,20 +52,39 @@ const sendMessage = async (
 ) => await send(buildURL("sendMessage", Some({ chat_id, text }), env));
 
 const commands: CommandMap = {
-  nft: async ({ chat: { id } }, _args, env) => {
-    // validate:
-    // - address length is 43
-    // - is valid erc721 contract address
-    // - id is a positive number
-    // - nft with id exists
-
+  nft: async (msg, args, env) => {
     // fetch metadata
     // send message
 
     // /nft [address]                                   [id]
     // /nft xdcf87f7dd4e47dd5bcac902c381ea0d2730db5c6ad 336
 
-    return await sendMessage({ chat_id: id, text: "Not implemented" }, env);
+    const conditions: ((args: string[]) => Result<boolean, string>)[] = [
+      // - address length is 43
+      ([add]) => add.length === 43 ? Ok(true) : Err("Invalid address"),
+      // - is valid erc721 contract address
+      // TODO(jabolo): implement this check
+      // - id is a positive number
+      ([, id]) => +id > 0 ? Ok(true) : Err("Invalid id"),
+      // - nft with id exists
+      // TODO(jabolo): implement this check
+    ];
+
+    const errors = conditions.map((fn) => fn(args)).filter((result) =>
+      result.isErr()
+    ).map((r) => `⚠️ ${r.err().unwrap()}`);
+
+    if (errors.length) {
+      return await sendMessage(
+        { chat_id: msg.chat.id, text: errors[0] },
+        env,
+      );
+    }
+
+    return await sendMessage(
+      { chat_id: msg.chat.id, text: "Not implemented" },
+      env,
+    );
   },
 };
 
