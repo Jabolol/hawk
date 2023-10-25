@@ -7,7 +7,13 @@
 
 import TelegramBot, { Update } from "telegram-types";
 import { Err, None, Ok, Option, Some } from "monads";
-import { Entries, EventMap, RouteMap, WranglerEnv } from "~/types.ts";
+import {
+  Entries,
+  EventMap,
+  EventMapFunctions,
+  RouteMap,
+  WranglerEnv,
+} from "~/types.ts";
 
 const WEBHOOK = "/endpoint";
 
@@ -44,10 +50,7 @@ const events: EventMap = {
   message: async (msg, env) => {
     const url = buildURL(
       "sendMessage",
-      Some({
-        chat_id: msg.chat.id,
-        text: `echo: ${msg.text}`,
-      }),
+      Some({ chat_id: msg.chat.id, text: `echo: ${msg.text}` }),
       env,
     );
 
@@ -66,20 +69,28 @@ const getAuth = (headers: Headers): Option<string> => {
   return auth ? Some(auth) : None;
 };
 
+const getEvent = (
+  event: keyof EventMap,
+): Option<NonNullable<EventMapFunctions>> => {
+  const fn = events[event];
+  return fn ? Some(fn) : None;
+};
+
 const execute = async <T extends keyof EventMap>(
   { event, payload }: {
     event: T;
-    payload: Parameters<NonNullable<EventMap[T]>>[0];
+    payload: Parameters<NonNullable<EventMapFunctions>>[0];
   },
   env: WranglerEnv,
 ) => {
-  const result = events[event] ? Some(events[event]) : None;
+  const result = getEvent(event);
 
   const fn = result.match({
     some: (fn) => fn,
     none: () => () => console.log(`Handler for ${event} not found!`),
   });
 
+  // @ts-ignore This is a 2 days project, I don't have time to fix this
   await fn(payload, env);
 };
 

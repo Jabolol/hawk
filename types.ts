@@ -9,6 +9,8 @@ export type EventMap = {
   ) => Promise<void> | void;
 };
 
+export type EventMapFunctions = EventMap[keyof EventMap];
+
 export type RouteMap = Record<
   string,
   (r: Request, e: WranglerEnv) => Promise<Response> | Response
