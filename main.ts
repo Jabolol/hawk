@@ -6,8 +6,9 @@
 /// <reference lib="dom.asynciterable" />
 
 import TelegramBot, { Update } from "telegram-types";
-import { Err, None, Ok, Option, Some } from "monads";
+import { Err, None, Ok, Option, Result, Some } from "monads";
 import {
+  CommandMap,
   Entries,
   EventMap,
   EventMapFunctions,
@@ -17,7 +18,7 @@ import {
 
 const WEBHOOK = "/endpoint";
 
-const buildURL = <T extends keyof TelegramBot>(
+export const buildURL = <T extends keyof TelegramBot>(
   name: T,
   params: Option<Record<string, unknown>> = None,
   env: WranglerEnv,
@@ -45,16 +46,60 @@ const send = async (url: string) => {
   });
 };
 
+const sendMessage = async (
+  { chat_id, text }: Record<string, unknown>,
+  env: WranglerEnv,
+) => await send(buildURL("sendMessage", Some({ chat_id, text }), env));
+
+const commands: CommandMap = {
+  nft: async (_msg, _args, env) => {
+    // validate:
+    // - address length is 43
+    // - is valid erc721 contract address
+    // - id is a positive number
+    // - nft with id exists
+
+    // fetch metadata
+    // send message
+
+    // /nft [address]                                   [id]
+    // /nft xdcf87f7dd4e47dd5bcac902c381ea0d2730db5c6ad 336
+
+    return await sendMessage({ chat_id: 0, text: "Not implemented" }, env);
+  },
+};
+
 const events: EventMap = {
   update_id: () => void 0,
   message: async (msg, env) => {
-    const url = buildURL(
-      "sendMessage",
-      Some({ chat_id: msg.chat.id, text: `echo: ${msg.text}` }),
-      env,
-    );
+    const split = msg.text?.split(" ");
 
-    await send(url);
+    const input: Option<string[]> = msg.text && msg.text.split(" ").length > 1
+      ? Some(split)
+      : None;
+
+    const [splitErr, splitOk] = input.match({
+      some: (args) => [false, args],
+      none: () => [true, []],
+    });
+
+    if (splitErr) {
+      return sendMessage(
+        { chat_id: msg.chat.id, text: "❌ Invalid command!" },
+        env,
+      );
+    }
+
+    const command: Result<CommandMap[keyof CommandMap], string> =
+      commands[splitOk[0]]
+        ? Ok(commands[splitOk[0]])
+        : Err(`⚠️ Command not found`);
+
+    await command.match({
+      ok: async (fn) => await fn(msg, splitOk.slice(1), env),
+      err: async (err) =>
+        await sendMessage({ chat_id: msg.chat.id, text: err }, env),
+    });
   },
 };
 

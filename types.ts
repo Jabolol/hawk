@@ -1,4 +1,4 @@
-import { Update } from "telegram-types";
+import { Message, Update } from "telegram-types";
 
 export type Entries<T> = [keyof T, NonNullable<T[keyof T]>][];
 
@@ -19,4 +19,12 @@ export type RouteMap = Record<
 export type WranglerEnv = {
   ENV_BOT_SECRET: string;
   ENV_BOT_TOKEN: string;
+};
+
+export type CommandMap = {
+  [cmd: string]: (
+    message: Message,
+    args: string[],
+    env: WranglerEnv,
+  ) => Promise<void> | void;
 };
