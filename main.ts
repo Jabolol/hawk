@@ -1,67 +1,111 @@
-/// <reference no-default-lib="true" />
-/// <reference lib="dom" />
-/// <reference lib="es2015" />
-/// <reference lib="webworker" />
-/// <reference lib="dom.iterable" />
-/// <reference lib="dom.asynciterable" />
-
-import { Message, Update } from "telegram-types";
+import "$std/dotenv/load.ts";
+import TelegramBot, { Update } from "telegram-types";
+import { Err, None, Ok, Option, Some } from "monads";
+import { Entries, EventMap, RouteMap } from "~/types.ts";
 
 const WEBHOOK = "/endpoint";
 
-// @ts-expect-error cloudflare workers env vars
-const TOKEN = ENV_BOT_TOKEN;
-// @ts-expect-error cloudflare workers env vars
-const SECRET = ENV_BOT_SECRET;
+const TOKEN = Deno.env.get("ENV_BOT_TOKEN");
+const SECRET = Deno.env.get("ENV_BOT_SECRET");
 
-addEventListener("fetch", (event) => {
-  if (!(event instanceof FetchEvent)) {
-    return;
-  }
+const buildURL = <T extends keyof TelegramBot>(
+  name: T,
+  params: Record<string, unknown>,
+) => {
+  const query = params
+    ? `?${
+      new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params).map(([k, v]) => [k, `${v}`]),
+        ),
+      ).toString()
+    }`
+    : "";
+  return `https://api.telegram.org/bot${TOKEN}/${name}${query}`;
+};
 
-  const url = new URL(event.request.url);
+const send = async (url: string) => {
+  const response = await fetch(url);
+  const result = response.ok ? Ok(response) : Err(response.status);
 
-  const routes = {
-    [WEBHOOK]: () => handleWebhook(event),
-  } as { [k: string]: () => Promise<Response> | Response };
+  result.match({
+    ok: () => void 0,
+    err: (status) => console.error(`Error fetching ${url}: ${status}`),
+  });
+};
 
-  let handler = routes[url.pathname];
-  handler ??= () => new Response("Not found", { status: 404 });
+const events: EventMap = {
+  update_id: () => void 0,
+  message: async (msg) => {
+    const url = buildURL("sendMessage", {
+      chat_id: msg.chat.id,
+      text: `echo: ${msg.text}`,
+    });
 
-  return event.respondWith(handler());
-});
+    await send(url);
+  },
+};
 
-// https://core.telegram.org/bots/api#update
-async function handleWebhook(event: FetchEvent) {
-  if (event.request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== SECRET) {
+const entries = <T extends object>(obj: T) => Object.entries(obj) as Entries<T>;
+
+const routes: RouteMap = {
+  [WEBHOOK]: (r) => handleWebhook(r),
+};
+
+const getAuth = (headers: Headers): Option<string> => {
+  const auth = headers.get("X-Telegram-Bot-Api-Secret-Token");
+  return auth ? Some(auth) : None;
+};
+
+const execute = <T extends keyof EventMap>(
+  { event, payload }: {
+    event: T;
+    payload: Parameters<NonNullable<EventMap[T]>>[0];
+  },
+) => {
+  return events[event]?.(payload);
+};
+
+const handleWebhook = async (request: Request): Promise<Response> => {
+  const auth = getAuth(request.headers).unwrapOr("[NONE]");
+
+  if (auth !== SECRET) {
     return new Response("Unauthorized", { status: 403 });
   }
 
-  event.waitUntil(onUpdate(await event.request.json()));
+  const update: Update = await request.json();
 
-  return new Response("Ok");
-}
+  const processable = entries(update).flatMap(([event, payload]) =>
+    events[event]
+      ? Ok({ event, payload })
+      : Err(`Handler for ${event} not found!`)
+  ).filter((entity) => entity.isOk()).flatMap((entity) => entity.unwrap());
 
-// https://core.telegram.org/bots/api#update
-async function onUpdate(update: Update) {
-  if (update.message) {
-    await onMessage(update.message);
+  const result = await Promise.allSettled(processable.flatMap(execute));
+
+  const errors = result.filter(({ status }) => status === "rejected");
+
+  if (errors) {
+    return new Response(JSON.stringify(errors), { status: 500 });
   }
-}
 
-// https://core.telegram.org/bots/api#message
-function onMessage(message: Message) {
-  return sendPlainText(message.chat.id, "echo: " + message.text);
-}
+  return new Response("OK", { status: 200 });
+};
 
-// https://core.telegram.org/bots/api#sendmessage
-async function sendPlainText(chatId: number, text: string) {
-  return (await fetch(
-    apiUrl("sendMessage", { text, chat_id: chatId.toString() }),
-  )).json();
-}
+const getHandler = (path: string): Option<typeof routes[number]> => {
+  const route = routes[path];
+  return route ? Some(route) : None;
+};
 
-function apiUrl(methodName: string, params?: { [k: string]: string }): string {
-  const query = params ? `?${new URLSearchParams(params).toString()}` : "";
-  return `https://api.telegram.org/bot${TOKEN}/${methodName}${query}`;
-}
+const handler: Deno.ServeHandler = async (request) => {
+  const url = new URL(request.url);
+  const result = getHandler(url.pathname);
+  const fn = result.match({
+    some: (func) => func,
+    none: () => () => new Response("Not found", { status: 404 }),
+  });
+
+  return await fn(request);
+};
+
+await Deno.serve(handler).finished;

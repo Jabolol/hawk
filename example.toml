@@ -1,7 +1,0 @@
-name = "main"
-main = "main.js"
-compatibility_date = "2023-10-24"
-
-[vars]
-ENV_BOT_SECRET = ""
-ENV_BOT_TOKEN = ""

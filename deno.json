@@ -1,10 +1,12 @@
 {
   "lock": false,
   "imports": {
+    "~/": "./",
+    "monads": "npm:@sniptt/monads",
+    "$std/": "https://deno.land/std@0.200.0/",
     "telegram-types": "npm:@types/node-telegram-bot-api"
   },
   "tasks": {
-    "build": "deno run --allow-read=. --allow-write=main.js --allow-net=deno.land build.ts",
-    "deploy": "npx wrangler deploy"
+    "start": "deno run -A main.ts"
   }
 }
