@@ -85,16 +85,16 @@ const events: EventMap = {
       ([cmd]) =>
         cmd.startsWith("/")
           ? Ok(true)
-          : Err("❌ The command must start with /"),
+          : Err("The command must start with /"),
       (args) =>
         args.length > 1
           ? Ok(true)
-          : Err("❌ The command must have at least one argument"),
+          : Err("The command must have at least one argument"),
       (
         [cmd],
       ) => (cmd.slice(1) in commands
         ? Ok(true)
-        : Err("❌ The specified command does not exist")),
+        : Err("The specified command does not exist")),
     ];
 
     const errors = conditions.map((fn) => fn(split)).filter((result) =>
