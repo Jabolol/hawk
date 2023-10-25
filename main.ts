@@ -52,7 +52,7 @@ const sendMessage = async (
 ) => await send(buildURL("sendMessage", Some({ chat_id, text }), env));
 
 const commands: CommandMap = {
-  nft: async (_msg, _args, env) => {
+  nft: async ({ chat: { id } }, _args, env) => {
     // validate:
     // - address length is 43
     // - is valid erc721 contract address
@@ -65,7 +65,7 @@ const commands: CommandMap = {
     // /nft [address]                                   [id]
     // /nft xdcf87f7dd4e47dd5bcac902c381ea0d2730db5c6ad 336
 
-    return await sendMessage({ chat_id: 0, text: "Not implemented" }, env);
+    return await sendMessage({ chat_id: id, text: "Not implemented" }, env);
   },
 };
 
