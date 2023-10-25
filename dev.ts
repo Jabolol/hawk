@@ -27,11 +27,11 @@ export const deleteHook = async () => {
   );
 };
 
-export const setHook = async () => {
+export const setHook = async (newUrl: string) => {
   const url = buildURL(
     "setWebHook",
     Some({
-      url: "https://main.xdc-hawk.workers.dev/endpoint",
+      url: newUrl,
       drop_pending_updates: true,
       secret_token: env.ENV_BOT_SECRET,
     }),

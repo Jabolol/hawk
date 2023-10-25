@@ -72,34 +72,47 @@ const commands: CommandMap = {
 const events: EventMap = {
   update_id: () => void 0,
   message: async (msg, env) => {
-    const split = msg.text?.split(" ");
+    if (!msg.text) {
+      return await sendMessage({
+        chat_id: 0,
+        text: "How did you even do this?",
+      }, env);
+    }
 
-    const input: Option<string[]> = msg.text && msg.text.split(" ").length > 1
-      ? Some(split)
-      : None;
+    const split = msg.text.split(" ");
 
-    const [splitErr, splitOk] = input.match({
-      some: (args) => [false, args],
-      none: () => [true, []],
-    });
+    const conditions: ((args: string[]) => Result<boolean, string>)[] = [
+      ([cmd]) =>
+        cmd.startsWith("/")
+          ? Ok(true)
+          : Err("❌ The command must start with /"),
+      (args) =>
+        args.length > 1
+          ? Ok(true)
+          : Err("❌ The command must have at least one argument"),
+      (
+        [cmd],
+      ) => (cmd.slice(1) in commands
+        ? Ok(true)
+        : Err("❌ The specified command does not exist")),
+    ];
 
-    if (splitErr) {
-      return sendMessage(
-        { chat_id: msg.chat.id, text: "❌ Invalid command!" },
+    const errors = conditions.map((fn) => fn(split)).filter((result) =>
+      result.isErr()
+    ).map(
+      (r) => `⚠️ ${r.unwrap()}`,
+    );
+
+    if (errors.length) {
+      return await sendMessage(
+        { chat_id: msg.chat.id, text: "Command errors:\n" + errors.join("\n") },
         env,
       );
     }
 
-    const command: Result<CommandMap[keyof CommandMap], string> =
-      commands[splitOk[0]]
-        ? Ok(commands[splitOk[0]])
-        : Err(`⚠️ Command not found`);
+    const name = split[0].slice(1);
 
-    await command.match({
-      ok: async (fn) => await fn(msg, splitOk.slice(1), env),
-      err: async (err) =>
-        await sendMessage({ chat_id: msg.chat.id, text: err }, env),
-    });
+    await (commands[name])(msg, split.slice(1), env);
   },
 };
 
