@@ -108,4 +108,4 @@ const handler: Deno.ServeHandler = async (request) => {
   return await fn(request);
 };
 
-await Deno.serve(handler).finished;
+Deno.serve(handler);
