@@ -74,7 +74,7 @@ const events: EventMap = {
   message: async (msg, env) => {
     if (!msg.text) {
       return await sendMessage({
-        chat_id: 0,
+        chat_id: msg.chat.id,
         text: "How did you even do this?",
       }, env);
     }
@@ -82,30 +82,28 @@ const events: EventMap = {
     const split = msg.text.split(" ");
 
     const conditions: ((args: string[]) => Result<boolean, string>)[] = [
-      ([cmd]) =>
-        cmd.startsWith("/")
-          ? Ok(true)
-          : Err("The command must start with /"),
-      (args) =>
-        args.length > 1
-          ? Ok(true)
-          : Err("The command must have at least one argument"),
       (
         [cmd],
       ) => (cmd.slice(1) in commands
         ? Ok(true)
         : Err("The specified command does not exist")),
+      ([cmd]) =>
+        cmd.startsWith("/") ? Ok(true) : Err("The command must start with /"),
+      (args) =>
+        args.length > 1
+          ? Ok(true)
+          : Err("The command must have at least one argument"),
     ];
 
     const errors = conditions.map((fn) => fn(split)).filter((result) =>
       result.isErr()
     ).map(
-      (r) => `⚠️ ${r.unwrap()}`,
+      (r) => `⚠️ ${r.err().unwrap()}`,
     );
 
     if (errors.length) {
       return await sendMessage(
-        { chat_id: msg.chat.id, text: "Command errors:\n" + errors.join("\n") },
+        { chat_id: msg.chat.id, text: errors[0] },
         env,
       );
     }
