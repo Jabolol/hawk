@@ -5,10 +5,16 @@ export type Entries<T> = [keyof T, NonNullable<T[keyof T]>][];
 export type EventMap = {
   [k in keyof NonNullable<Update>]?: (
     payload: NonNullable<Update[k]>,
+    env: WranglerEnv,
   ) => Promise<void> | void;
 };
 
 export type RouteMap = Record<
   string,
-  (r: Request) => Promise<Response> | Response
+  (r: Request, e: WranglerEnv) => Promise<Response> | Response
 >;
+
+export type WranglerEnv = {
+  ENV_BOT_SECRET: string;
+  ENV_BOT_TOKEN: string;
+};

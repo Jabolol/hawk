@@ -4,10 +4,15 @@
 
 1. Clone the repo
 ```sh
-git clone https://github.com/Jabolol/hawk.git .
+deno task build
 ```
 
-2. Start the project
+3. Populate `wranger.toml` with your Cloudflare credentials
 ```sh
-deno task start
+cp example.toml wrangler.toml
+```
+
+4. Deploy the project
+```sh
+deno task deploy
 ```
