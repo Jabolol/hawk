@@ -10,18 +10,18 @@ const SECRET = Deno.env.get("ENV_BOT_SECRET");
 
 const buildURL = <T extends keyof TelegramBot>(
   name: T,
-  params: Record<string, unknown>,
+  params: Option<Record<string, unknown>> = None,
 ) => {
-  const query = params
-    ? `?${
+  const result = params.match({
+    some: (obj) =>
       new URLSearchParams(
         Object.fromEntries(
-          Object.entries(params).map(([k, v]) => [k, `${v}`]),
+          Object.entries(obj).map(([k, v]) => [k, `${v}`]),
         ),
-      ).toString()
-    }`
-    : "";
-  return `https://api.telegram.org/bot${TOKEN}/${name}${query}`;
+      ).toString(),
+    none: () => "",
+  });
+  return `https://api.telegram.org/bot${TOKEN}/${name}${result}`;
 };
 
 const send = async (url: string) => {
@@ -37,10 +37,13 @@ const send = async (url: string) => {
 const events: EventMap = {
   update_id: () => void 0,
   message: async (msg) => {
-    const url = buildURL("sendMessage", {
-      chat_id: msg.chat.id,
-      text: `echo: ${msg.text}`,
-    });
+    const url = buildURL(
+      "sendMessage",
+      Some({
+        chat_id: msg.chat.id,
+        text: `echo: ${msg.text}`,
+      }),
+    );
 
     await send(url);
   },
@@ -63,7 +66,12 @@ const execute = <T extends keyof EventMap>(
     payload: Parameters<NonNullable<EventMap[T]>>[0];
   },
 ) => {
-  return events[event]?.(payload);
+  const result = events[event] ? Some(events[event]) : None;
+
+  result.match({
+    some: (fn) => fn(payload),
+    none: () => console.error(`Handler for ${event} not found!`),
+  });
 };
 
 const handleWebhook = async (request: Request): Promise<Response> => {
