@@ -12,6 +12,7 @@ import {
   Entries,
   EventMap,
   EventMapFunctions,
+  MaybePromise,
   RouteMap,
   WranglerEnv,
 } from "~/types.ts";
@@ -36,9 +37,16 @@ export const buildURL = <T extends keyof TelegramBot>(
   return `https://api.telegram.org/bot${env.ENV_BOT_TOKEN}/${name}${result}`;
 };
 
+const safeFetch = async (
+  ...[input, init]: Parameters<typeof fetch>
+): Promise<Result<Response, number>> => {
+  const response = await fetch(input, init);
+
+  return response.ok ? Ok(response) : Err(response.status);
+};
+
 const send = async (url: string) => {
-  const response = await fetch(url);
-  const result = response.ok ? Ok(response) : Err(response.status);
+  const result = await safeFetch(url);
 
   result.match({
     ok: () => console.log(`Fetched ${url} successfully`),
@@ -53,26 +61,28 @@ const sendMessage = async (
 
 const commands: CommandMap = {
   nft: async (msg, args, env) => {
-    // fetch metadata
-    // send message
+    const conditions:
+      ((args: string[]) => MaybePromise<Result<boolean, string>>)[] = [
+        ([add]) =>
+          add.length === 43 ? Ok(true) : Err("Address must be 43 chars!"),
+        ([add]) =>
+          add.startsWith("xdc")
+            ? Ok(true)
+            : Err("Address must start with `xdc`"),
+        ([, id]) => +id > 0 ? Ok(true) : Err("ID must be a positive number!"),
+        async ([add, id]) =>
+          (await safeFetch(
+            `https://xdc.blocksscan.io/api/tokens/${add}/tokenID/${id}`,
+          )).match<Result<boolean, string>>({
+            ok: () => Ok(true),
+            err: () => Err("Token does not exist!"),
+          }),
+      ];
 
-    // /nft [address]                                   [id]
-    // /nft xdcf87f7dd4e47dd5bcac902c381ea0d2730db5c6ad 336
-
-    const conditions: ((args: string[]) => Result<boolean, string>)[] = [
-      // - address length is 43
-      ([add]) => add.length === 43 ? Ok(true) : Err("Invalid address"),
-      // - is valid erc721 contract address
-      // TODO(jabolo): implement this check
-      // - id is a positive number
-      ([, id]) => +id > 0 ? Ok(true) : Err("Invalid id"),
-      // - nft with id exists
-      // TODO(jabolo): implement this check
-    ];
-
-    const errors = conditions.map((fn) => fn(args)).filter((result) =>
-      result.isErr()
-    ).map((r) => `⚠️ ${r.err().unwrap()}`);
+    const errors = (await Promise.all(conditions.map((fn) => fn(args))))
+      .filter((
+        result,
+      ) => result.isErr()).map((r) => `⚠️ ${r.err().unwrap()}`);
 
     if (errors.length) {
       return await sendMessage(

@@ -28,3 +28,5 @@ export type CommandMap = {
     env: WranglerEnv,
   ) => Promise<void> | void;
 };
+
+export type MaybePromise<T> = T | Promise<T>;
