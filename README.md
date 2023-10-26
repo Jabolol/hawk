@@ -6,6 +6,9 @@
 a simple way to get crypto prices and charts on Telegram, as well as to manage
 different statistics and alerts on the [`XDC`](https://xdc.network/) network.
 
+You can invite **hawk** by clicking [here](https://t.me/xdc_hawk_bot) and enjoy
+the following features:
+
 - Employ the NFT `viewer` feature for an instant NFT preview right.
 - Seamlessly export blockchain `blocks` to the pastebin.
 - Access real-time statistics on trading prices with the `spot` trading feature.
