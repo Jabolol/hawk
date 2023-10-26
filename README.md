@@ -1,6 +1,6 @@
-# hawk
+![](./assets/banner.png)
 
-<img align="right" src="./assets/hawk.png" style="border-radius: 10px;" height="150px" alt="a hawk" />
+# hawk
 
 **Hawk** is a multi-purpose Telegram crypto bot. Its main purpose is to provide
 a simple way to get crypto prices and charts on Telegram, as well as to manage
