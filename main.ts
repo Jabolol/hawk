@@ -101,7 +101,7 @@ const commands: CommandMap = {
     }, env);
   },
   nft: async (msg, args, env) => {
-    if (args.length !== 1) {
+    if (args.length !== 2) {
       return await dispatch("sendMessage", {
         chat_id: msg.chat.id,
         text: "⚠️ Invalid arguments!",
