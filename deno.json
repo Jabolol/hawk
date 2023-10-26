@@ -2,7 +2,10 @@
   "lock": false,
   "imports": {
     "~/": "./",
+    "viem": "https://esm.sh/viem@1.16.6",
+    "viem/": "https://esm.sh/viem@1.16.6/",
     "$std/": "https://deno.land/std@0.200.0/",
+    "charts": "https://deno.land/x/quickchart@v1.0.0/mod.ts",
     "telegram-types": "npm:@types/node-telegram-bot-api",
     "monads": "https://deno.land/x/monads@v0.5.10/mod.ts"
   },
