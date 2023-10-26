@@ -42,7 +42,9 @@ export const createChart = (input: KucoinData) => {
       labels: parsed.map(({ price }) => `${price}`),
       datasets: [
         {
-          label: "XDC Spot trading tendency",
+          label: `XDC Spot tendency at ${
+            new Date().toISOString().split("T")[1].split(".")[0]
+          }`,
           data: parsed.map(({ size }) => `${size}`),
           fill: false,
           borderColor: "rgba(46, 76, 126, 1)",
